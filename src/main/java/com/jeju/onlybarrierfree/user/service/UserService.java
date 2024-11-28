@@ -1,0 +1,81 @@
+package com.jeju.onlybarrierfree.user.service;
+
+
+import com.jeju.onlybarrierfree.auth.config.AuthenticationFacade;
+import com.jeju.onlybarrierfree.auth.jwt.JwtTokenUtils;
+import com.jeju.onlybarrierfree.user.Repository.UserRepository;
+import com.jeju.onlybarrierfree.user.dto.CreateUserDto;
+import com.jeju.onlybarrierfree.user.dto.ResponseUserDto;
+import com.jeju.onlybarrierfree.user.dto.UserDto;
+import com.jeju.onlybarrierfree.user.entity.UserEntity;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class UserService implements UserDetailsService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenUtils jwtTokenUtils;
+    private final AuthenticationFacade authFacade;
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        return userRepository.findByEmail(email)
+                .map(CustomUserDetails::fromEntity)
+                .orElseThrow(() -> new UsernameNotFoundException("not found"));
+    }
+
+    public UserEntity loadUserByEmail(String email) throws UsernameNotFoundException
+    {
+        return userRepository.findByEmail(email).orElseThrow(
+                () -> new UsernameNotFoundException("not found")
+        );
+    }
+
+    public UserDto createUser(CreateUserDto dto)
+    {
+        if(userRepository.existsByEmail(dto.getEmail()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "email already exists");
+
+        return UserDto.fromEntity(userRepository.save(UserEntity.builder()
+                .email(dto.getEmail())
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .username(dto.getName())
+                .profileImage(dto.getProfileImage())
+                .build()));
+    }
+
+    public void createOAuth2User(UserDto dto)
+    {
+        UserEntity newUser = UserEntity.builder()
+                .email(dto.getEmail())
+                .profileImage(dto.getProfileImage())
+                .username(dto.getUsername())
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .build();
+
+        UserDto.fromEntity(userRepository.save(newUser));
+    }
+
+    public boolean existsByEmail(String email){
+        return userRepository.existsByEmail(email);
+    }
+
+    public ResponseUserDto getMyProfile() {
+        UserEntity member = authFacade.extractUser();
+        return ResponseUserDto.fromEntity(member);
+    }
+
+}
