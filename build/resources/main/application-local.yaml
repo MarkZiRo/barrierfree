@@ -41,6 +41,20 @@ spring:
       port: 6379
 jwt:
   secret: ${JWT_SECRET}
-#
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+ors:
+  api:
+    key: 5b3ce3597851110001cf6248bd822f9d75cd474caa73195bb0970318
+
+openroute:
+  api:
+    key: 5b3ce3597851110001cf6248bd822f9d75cd474caa73195bb0970318
+
 #images:
 #  upload-root: ${UPLOAD_ROOT}
